@@ -8,7 +8,11 @@ Created on Tue Oct 26 09:18:39 2021
 import pprint  # for testing
 import sexpr   # for parsing
 
-TESTHARNESS_SCHEMATIC = 'test.kicad_sch'
+
+TEST_SCHEMATIC      = 'kicadtoverilog_test.kicad_sch'
+KICAD_PROJECT_DIR   = '..\\kicadtoverilog_test\\'
+VERILOG_PROJECT_DIR = '..\\verilog\\'
+
 
 # A Symbol definition, cached in a schematic page
 class Symbol:
@@ -185,8 +189,17 @@ class Page:
                 self.PropagateNet(current_net, self.wire2[i])
                 current_net += 1
         
+        # rename nets to eliminate port pins
         self.num_nets = current_net-1
-        
+        self.net_names = ['wire_NC']*(self.num_nets+1)
+        for i in range(1, self.num_nets+1):
+            renamed = False
+            for j in range(0,len(self.port_nets)):
+                if self.port_nets[j] == i:
+                    self.net_names[i] = self.port_name[j]
+                    renamed = True
+            if not renamed:
+                self.net_names[i] = 'net_'+str(i)
         #self.DumpNets()
                 
     def PropagateNet(self,net,loc):
@@ -257,7 +270,7 @@ class Page:
         
 def ParseFile(fname):
     print('Reading file:',fname);
-    with open(fname,'r') as f:
+    with open(KICAD_PROJECT_DIR+fname,'r') as f:
         sexp = f.read()
         return sexpr.parse_sexp(sexp)
     
@@ -283,7 +296,7 @@ def ParseFiles(pages, topfilename):
 pages = []
 
 # Parse all the pages
-ParseFiles(pages, TESTHARNESS_SCHEMATIC)
+ParseFiles(pages, TEST_SCHEMATIC)
 
 # Create netlists for each page
 print("Creating netlists...")
@@ -295,21 +308,35 @@ for page in pages:
 for page in pages:
     module_name = page.filename.replace('.','_')
     print("Writing file:",module_name+".v")
-    with open(module_name+'.v','w') as f:
+    with open(VERILOG_PROJECT_DIR+module_name+'.v','w') as f:
         f.write('module '+ module_name + '(\n')
         for i in range(0,len(page.port_name)):
             if i != 0:
                 f.write(',\n')
             f.write('    '+page.port_type[i]+' '+page.port_name[i])
         f.write(');\n\n')
+        wires_written = False
         for i in range(1,page.num_nets+1):
-            f.write('    wire w'+str(i)+';\n')
-        f.write('\n');
+            if page.net_names[i][0:4] == 'net_':
+                f.write('    wire '+page.net_names[i]+';\n')
+                wires_written = True
+        if wires_written:
+            f.write('\n');
         for s in page.symbolinsts:
-            f.write('    '+s.symtype+' '+s.name+'(/* */);\n')
+            f.write('    '+s.symtype+' '+s.name+'(')
+            for i in range(0,len(s.pin_nets)):
+                if i!=0:
+                    f.write(', ');
+                f.write(page.net_names[s.pin_nets[i]])
+            f.write(');\n')
         for s in page.sheets:
             sheet_name = s.filename.replace('.','_')
-            f.write('    '+sheet_name+' '+s.instancename+'(/* */);\n')
+            f.write('    '+sheet_name+' '+s.instancename+'(')
+            for i in range(0,len(s.pin_nets)):
+                if i!=0:
+                    f.write(', ');
+                f.write(page.net_names[s.pin_nets[i]])                  
+            f.write(');\n')
         f.write('endmodule\n')
 
     
