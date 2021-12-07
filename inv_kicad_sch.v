@@ -1,8 +1,9 @@
 module inv_kicad_sch(
-    input A,
-    output Y);
+    output Y,
+    input A);
 
-    // TBD wires
+    wire w1;
+    wire w2;
 
-    74LS04 U4(/* */);
+    NOT U4(/* */);
 endmodule

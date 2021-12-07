@@ -10,110 +10,308 @@ import sexpr   # for parsing
 
 TESTHARNESS_SCHEMATIC = 'test.kicad_sch'
 
-class VerilogSymbol:
-    def __init__(self,syminst,symtype):
-        self.syminst = syminst
-        self.symtype = symtype
-        
-class VerilogModule:
-    def __init__(self,name,filename):
-        self.name = name
-        self.filename = filename
+# A Symbol definition, cached in a schematic page
+class Symbol:
+    def __init__(self,parsed):
+        self.name = ''
+        self.pin_type = []
+        self.pin_loc = []
+        self.pin_name = []
+        self.pin_num = []
+        #pprint.pp(parsed)
+        for elem in parsed[2:]:
+            if isinstance(elem, list):
+                if elem[0] == 'property':
+                    if elem[1] == 'Value':
+                        self.name = elem[2]
+                elif elem[0] == 'symbol':
+                    for elem1 in elem:
+                        if elem1[0]=='pin':
+                            self.pin_type.append(elem1[1])
+                            for elem2 in elem1[3:]:
+                                if elem2[0] == 'at':
+                                    self.pin_loc.append((elem2[1],elem2[2]))
+                                elif elem2[0] == 'name':
+                                    self.pin_name.append(elem2[1])
+                                elif elem2[0] == 'number':
+                                    self.pin_num.append(elem2[1])
+        #print(self.name, self.pin_type, self.pin_loc, self.pin_name, self.pin_num)
+        #print()
+
+# A Symbol Instance on a schematic page
+class SymbolInstance:
+    def __init__(self,parsed):
+        self.name = ''
+        self.symtype = ''
+        self.loc = (0,0)
+        for item in parsed:
+            if item[0] == 'at':
+                self.loc = (item[1],item[2])
+            elif item[0] == 'property':
+                #pprint.pp(item)
+                if item[1] == 'Reference':
+                    self.name = item[2]
+                elif item[1] == 'Value':
+                    self.symtype = item[2]
+                
+# A Sheet (symbol) on a schematic page
+class Sheet:
+    def __init__(self,parsed):
+        self.instancename = ''
+        self.filename = ''
         self.pin_name = []
         self.pin_type = []
-        self.symbol = []
-        self.wire = []
-        self.chip = []
-        
-    def addPin(self,name,pintype):
+        self.pin_loc = []
+        for property in parsed:
+            if property[0] == 'property':
+                if property[1] == 'Sheet name':
+                    self.instancename = property[2]
+                elif property[1] == 'Sheet file':
+                    self.filename = property[2]
+            elif property[0] == 'pin':
+                pin_name = property[1]
+                pin_type = property[2]
+                for n in range(3,len(property)):
+                    x = property[n]
+                    if x[0] == 'at':
+                        self.addPin(pin_name,pin_type,x[1],x[2])
+                        
+    def addPin(self,name,pintype,x,y):
         self.pin_name.append(name)
         self.pin_type.append(pintype)
+        self.pin_loc.append((x,y))
+        #print(self.filename,self.instancename,name,pintype,(x,y))
         
-    def addSymbol(self,symbol):
-        self.symbol.append(symbol)
+# A Schematic Page, created by parsing a *.kicad_sch file
+class Page:
+    def __init__(self, filename, recurse):
+        self.sheets = []
+        self.symbolinsts = []
+        self.symbols = []
+        self.filename = filename
+        self.port_name = []
+        self.port_loc = []
+        self.port_type = []
+        self.wires = []
+        self.junctions = []
+        self.wire1 = []
+        self.wire2 = []
+        parsed = ParseFile(self.filename)
+        for elem in parsed:
+            if elem[0] == 'sheet':
+                sheet = Sheet(elem)
+                self.sheets.append(sheet)
+            elif elem[0] == 'symbol':
+                symbolinst = SymbolInstance(elem)
+                self.symbolinsts.append(symbolinst)
+                #print(symbolinst.name,symbolinst.symtype,symbolinst.loc)
+            elif elem[0] == 'lib_symbols':
+                for elem1 in elem[1:]:
+                    symbol = Symbol(elem1)
+                    self.symbols.append(symbol)
+            elif elem[0] == 'hierarchical_label':
+                self.port_name.append(elem[1])
+                for elem1 in elem[2:]:
+                    if elem1[0] == 'at':
+                        self.port_loc.append((elem1[1],elem1[2]))
+                    elif elem1[0] == 'shape':
+                        self.port_type.append(elem1[1])
+            elif elem[0] == 'wire':
+                wire_loc1 = (elem[1][1][1],elem[1][1][2])
+                wire_loc2 = (elem[1][2][1],elem[1][2][2])
+                self.wire1.append(wire_loc1)
+                self.wire2.append(wire_loc2)
+                #print('Wire:',wire_loc1,wire_loc2)    
+            elif elem[0] == 'junction':
+                junction_loc = (elem[1][1],elem[1][2])
+                self.junctions.append(junction_loc)
+                #print('Junction:',junction_loc)
+        # Create a reference from each symbolinst to it's symbol
+        self.CreateSymbolRefs()
+                
+    def Sheets(self):
+        return self.sheets
     
-    def addSheet(self,chip):
-        self.chip.append(chip)
-        
-    def addWire(self,wire):
-        self.wire.append(wire)
-        
-    def print(self):
-        print(self.name)
-        print(self.filename)
-        print(self.pin_name)
-        print(self.pin_type)
-        print()
+    def CreateSymbolRefs(self):
+        # Link Symbols with SymbolRefs
+        # Add symbolinst[i].pin_loc
+        for i in range(0,len(self.symbolinsts)):
+            value = self.symbolinsts[i].symtype
+            for j in range(0,len(self.symbols)):
+                if self.symbols[j].name == value:
+                    self.symbolinsts[i].symbol = self.symbols[j]
+                    symbol_loc = self.symbolinsts[i].loc
+                    self.symbolinsts[i].pin_loc = []
+                    for k in range(0,len(self.symbolinsts[i].symbol.pin_loc)):
+                        pin_loc = self.symbolinsts[i].symbol.pin_loc[k]
+                        inst_loc = (round(symbol_loc[0] + pin_loc[0],2),round(symbol_loc[1]+pin_loc[1],2))
+                        self.symbolinsts[i].pin_loc.append(inst_loc)
 
+    def DumpNets(self):
+        print(self.junction_nets)
+        print(self.wire_nets)
+        print(self.port_nets)
+        print()
+        for sheet in self.sheets:
+            print(sheet.pin_nets)
+        print()
+        for symbolinst in self.symbolinsts:
+            print(symbolinst.name)
+            print(symbolinst.pin_nets)
+        print()
+            
+    def CreateNets(self):
+        # Mark all nets as unknown
+        self.junction_nets = [0]*len(self.junctions)
+        self.wire_nets = [0]*len(self.wire1)
+        self.port_nets = [0]*len(self.port_name)
+        for sheet in self.sheets:
+            sheet.pin_nets = [0]*len(sheet.pin_name)
+        for symbolinst in self.symbolinsts:
+            symbolinst.pin_nets = [0]*len(symbolinst.symbol.pin_name)
+            
+        #self.DumpNets()
+        
+        current_net = 1
+        for i in range(0,len(self.junction_nets)):
+            if self.junction_nets[i] == 0:
+                self.junction_nets[i] = current_net
+                self.PropagateNet(current_net, self.junctions[i])
+                current_net += 1
+        for i in range(0,len(self.wire_nets)):
+            if self.wire_nets[i] == 0:
+                self.wire_nets[i] = current_net
+                self.PropagateNet(current_net, self.wire1[i])
+                self.PropagateNet(current_net, self.wire2[i])
+                current_net += 1
+        
+        self.num_nets = current_net-1
+        
+        #self.DumpNets()
+                
+    def PropagateNet(self,net,loc):
+        done = False
+        while not done:
+            done = True
+            for i in range(0,len(self.junctions)):
+                if self.junction_nets[i] == 0:
+                    if self.junctions[i] == loc:
+                        self.junction_nets[i] = net
+                        done = False
+            for i in range(0,len(self.wire1)):
+                if self.wire_nets[i] == 0:
+                    if self.wire1[i] == loc:
+                        self.wire_nets[i] = net
+                        self.PropagateNet(net,self.wire2[i])
+                        done = False
+                    if self.wire2[i] == loc:
+                        self.wire_nets[i] = net
+                        self.PropagateNet(net,self.wire1[i])
+                        done = False
+            for i in range(0,len(self.port_nets)):
+                if self.port_nets[i] == 0:
+                    if self.port_loc[i] == loc:
+                        self.port_nets[i] = net
+                        done = False
+            for sheet in self.sheets:
+                for i in range(0,len(sheet.pin_nets)):
+                    if sheet.pin_nets[i] == 0:
+                        if sheet.pin_loc[i] == loc:
+                            sheet.pin_nets[i] = net
+                            done = False
+            for symbolinst in self.symbolinsts:
+                for i in range(0,len(symbolinst.pin_nets)):
+                    if symbolinst.pin_nets[i] == 0:
+                        if symbolinst.pin_loc[i] == loc:
+                            symbolinst.pin_nets[i] = net
+                            done = False
+                                
+    def Dump(self):     
+        print('Page: ',self.filename)
+        print()
+        
+        print("Ports:")
+        for i in range(0,len(self.port_name)):
+            print(self.port_name[i],self.port_loc[i])
+        print()
+        
+        print("Sheet Pins:")
+        for i in range(0,len(self.sheets)):
+            print(self.sheets[i].filename,self.sheets[i].instancename)
+            for j in range(0,len(self.sheets[i].pin_name)):
+                print(self.sheets[i].pin_name[j],self.sheets[i].pin_loc[j])
+        print()
+    
+        print("Symbol Pins:")
+        for i in range(0,len(self.symbolinsts)):
+            name = self.symbolinsts[i].name
+            #value = self.symbolinsts[i].symtype
+            baseloc = self.symbolinsts[i].loc
+            symbol = self.symbolinsts[i].symbol
+            print(name, symbol.name)
+            for j in range(0,len(symbol.pin_name)):
+                loc = (round(symbol.pin_loc[j][0] + baseloc[0],2), round(symbol.pin_loc[j][1] + baseloc[1],2)) 
+                print(symbol.pin_name[j], symbol.pin_num[j], loc)
+
+        print()
+        
 def ParseFile(fname):
+    print('Reading file:',fname);
     with open(fname,'r') as f:
         sexp = f.read()
         return sexpr.parse_sexp(sexp)
     
-def ParseSymbols(chip,parsed):
-    for symbol in parsed:
-        if symbol[0] == 'symbol':
-            for item in symbol:
-                if item[0] == 'property':
-                    if item[1] == 'Reference':
-                        syminst = item[2]
-                    elif item[1] == 'Value':
-                        symtype = item[2]
-                        s = VerilogSymbol(syminst,symtype)
-                    elif item[1] == 'pin':
-                        s.addPin(item[2])
-            chip.addSymbol(s)
-    
-def ParseSheets(chip1,parsed):
-    chip_list = {}
-    for sheet in parsed:
-        if sheet[0] == 'sheet':
-            for property in sheet:
-                if property[0] == 'property':
-                    if property[1] == 'Sheet name':
-                        chip_name = property[2]
-                    elif property[1] == 'Sheet file':
-                        chip_file = property[2]
-                        chip = VerilogModule(chip_name, chip_file)
-                elif property[0] == 'pin':
-                    chip.addPin(property[1],property[2])
-            if not chip1 is None:
-                chip1.addSheet(chip)
-            if not (chip_file in chip_list):
-                chip_list[chip_file] = chip
-                HandleSheet(chip)
-    return chip_list
-                
-def HandleSheet(chip1):
-    parsed = ParseFile(chip1.filename);
-        
-    ParseSymbols(chip1,parsed)
-    #ParseWires()
-    
-    ParseSheets(chip1,parsed)
+# Parse schematic files recursively
+def PageCreateRecursive(pageNames, pages, filename):
+    page = Page(filename, False)
+    pages.append(page)
+    pageNames.append(page.filename)
+
+    for sheet in page.Sheets():
+        if sheet.filename in pageNames:
+            pass
+        else:
+            PageCreateRecursive(pageNames, pages, sheet.filename)
+            
+# Parse Schematic Files starting with the top one in the heirarchy
+def ParseFiles(pages, topfilename):
+    pageNames = []
+    PageCreateRecursive(pageNames, pages, topfilename)
     
 ######################################################
 
-parsed = ParseFile(TESTHARNESS_SCHEMATIC)
-chip_list = ParseSheets(None,parsed)
+pages = []
 
-for item in chip_list:
-    chip = chip_list[item]
-    module_name = chip.filename.replace('.','_')
+# Parse all the pages
+ParseFiles(pages, TESTHARNESS_SCHEMATIC)
+
+# Create netlists for each page
+print("Creating netlists...")
+for page in pages:
+    page.CreateNets()
+    
+# Generate Verilog files
+
+for page in pages:
+    module_name = page.filename.replace('.','_')
+    print("Writing file:",module_name+".v")
     with open(module_name+'.v','w') as f:
         f.write('module '+ module_name + '(\n')
-        for i in range(0,len(chip.pin_name)):
+        for i in range(0,len(page.port_name)):
             if i != 0:
                 f.write(',\n')
-            f.write('    '+chip.pin_type[i]+' '+chip.pin_name[i])
-        f.write(');\n')
-        f.write('\n    // TBD wires\n\n')
-        for s in chip.symbol:
-            f.write('    '+s.symtype+' '+s.syminst+'(/* */);\n')
-        for c in chip.chip:
-            symbol_name = c.filename.replace('.','_')
-            f.write('    '+symbol_name+' '+c.name+'(/* */);\n')
+            f.write('    '+page.port_type[i]+' '+page.port_name[i])
+        f.write(');\n\n')
+        for i in range(1,page.num_nets+1):
+            f.write('    wire w'+str(i)+';\n')
+        f.write('\n');
+        for s in page.symbolinsts:
+            f.write('    '+s.symtype+' '+s.name+'(/* */);\n')
+        for s in page.sheets:
+            sheet_name = s.filename.replace('.','_')
+            f.write('    '+sheet_name+' '+s.instancename+'(/* */);\n')
         f.write('endmodule\n')
+
     
     
     

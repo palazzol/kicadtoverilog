@@ -447,17 +447,17 @@
     (path "/ff368108-8e1d-426e-8081-e47bd5b6edd3"
       (reference "D2") (unit 1) (value "LED") (footprint "")
     )
-    (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/3ceca02b-b6d5-40a4-bce7-285ec687eca7"
-      (reference "U1") (unit 1) (value "74LS02") (footprint "")
+    (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/e53f4888-76de-4640-a4c8-0adb20400fee"
+      (reference "U1") (unit 1) (value "NOR2") (footprint "")
     )
-    (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/6db11052-8c61-4da3-aec0-5a01654d4b94"
-      (reference "U2") (unit 1) (value "74LS02") (footprint "")
+    (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/c84a8f18-60ff-4779-8c72-0d23cfaaf6f7"
+      (reference "U2") (unit 1) (value "NOR2") (footprint "")
     )
-    (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/633f75c5-3e59-4c5c-acaa-7b07045091db/c7421703-3b90-467b-a281-11d26d08408c"
-      (reference "U3") (unit 1) (value "74LS04") (footprint "")
+    (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/633f75c5-3e59-4c5c-acaa-7b07045091db/2089dfb8-24a2-4650-a00d-8fcfa11c393e"
+      (reference "U3") (unit 1) (value "NOT") (footprint "")
     )
-    (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/f15199f8-d839-4b26-a88d-cbb37c25a286/c7421703-3b90-467b-a281-11d26d08408c"
-      (reference "U4") (unit 1) (value "74LS04") (footprint "")
+    (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/f15199f8-d839-4b26-a88d-cbb37c25a286/2089dfb8-24a2-4650-a00d-8fcfa11c393e"
+      (reference "U4") (unit 1) (value "NOT") (footprint "")
     )
     (path "/844f01a0-ac23-4a99-910e-4e91c579bb2b"
       (reference "X1") (unit 1) (value "DGOF5S3") (footprint "Oscillator:Oscillator_DIP-14")

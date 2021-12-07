@@ -1,12 +1,16 @@
 module TestIC_kicad_sch(
+    output ~{Q},
     input CLK,
-    output Q,
-    output ~{Q});
+    output Q);
 
-    // TBD wires
+    wire w1;
+    wire w2;
+    wire w3;
+    wire w4;
+    wire w5;
 
-    74LS02 U1(/* */);
-    74LS02 U2(/* */);
+    NOR2 U2(/* */);
+    NOR2 U1(/* */);
     inv_kicad_sch inv(/* */);
     inv_kicad_sch inv1(/* */);
 endmodule
