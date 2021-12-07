@@ -13,7 +13,9 @@ TEST_SCHEMATIC      = 'kicadtoverilog_test.kicad_sch'
 KICAD_PROJECT_DIR   = '..\\kicadtoverilog_test\\'
 VERILOG_PROJECT_DIR = '..\\verilog\\'
 
-
+def ConvertUnderbarName(name):
+    return name.replace('~{','not_').replace('}','')
+    
 # A Symbol definition, cached in a schematic page
 class Symbol:
     def __init__(self,parsed):
@@ -36,7 +38,7 @@ class Symbol:
                                 if elem2[0] == 'at':
                                     self.pin_loc.append((elem2[1],elem2[2]))
                                 elif elem2[0] == 'name':
-                                    self.pin_name.append(elem2[1])
+                                    self.pin_name.append(ConvertUnderbarName(elem2[1]))
                                 elif elem2[0] == 'number':
                                     self.pin_num.append(elem2[1])
         #print(self.name, self.pin_type, self.pin_loc, self.pin_name, self.pin_num)
@@ -73,7 +75,7 @@ class Sheet:
                 elif property[1] == 'Sheet file':
                     self.filename = property[2]
             elif property[0] == 'pin':
-                pin_name = property[1]
+                pin_name = ConvertUnderbarName(property[1])
                 pin_type = property[2]
                 for n in range(3,len(property)):
                     x = property[n]
@@ -114,7 +116,7 @@ class Page:
                     symbol = Symbol(elem1)
                     self.symbols.append(symbol)
             elif elem[0] == 'hierarchical_label':
-                self.port_name.append(elem[1])
+                self.port_name.append(ConvertUnderbarName(elem[1]))
                 for elem1 in elem[2:]:
                     if elem1[0] == 'at':
                         self.port_loc.append((elem1[1],elem1[2]))
