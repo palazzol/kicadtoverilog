@@ -191,8 +191,9 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
+<!--
 Your Name - [@fpalazzolo](https://twitter.com/fpalazzolo) - frank@avoidspikes.com
-
+-->
 Project Link: [https://github.com/palazzol/kicadtoverilog](https://github.com/palazzol/kicadtoverilog)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
