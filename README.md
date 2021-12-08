@@ -85,7 +85,7 @@
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
 Python3 script and KiCad symbol library, to support export of structural, synthesizable Verilog from KiCad schematic sheets.
-The hierarchical nature of KiCad sheets are supported as Verilog Modules
+This script understands the hierarchy of KiCad sheets.  Each sheet is supported as a Verilog Module.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
