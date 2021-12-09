@@ -8,7 +8,6 @@ Created on Tue Oct 26 09:18:39 2021
 import pprint  # for testing
 import sexpr   # for parsing
 
-
 TEST_SCHEMATIC      = 'kicadtoverilog_test.kicad_sch'
 KICAD_PROJECT_DIR   = '..\\kicadtoverilog_test\\'
 VERILOG_PROJECT_DIR = '..\\verilog\\'
@@ -52,7 +51,7 @@ class SymbolInstance:
         self.loc = (0,0)
         for item in parsed:
             if item[0] == 'at':
-                self.loc = (item[1],item[2])
+                self.loc = (item[1],item[2],item[3])
             elif item[0] == 'property':
                 #pprint.pp(item)
                 if item[1] == 'Reference':
@@ -110,7 +109,6 @@ class Page:
             elif elem[0] == 'symbol':
                 symbolinst = SymbolInstance(elem)
                 self.symbolinsts.append(symbolinst)
-                #print(symbolinst.name,symbolinst.symtype,symbolinst.loc)
             elif elem[0] == 'lib_symbols':
                 for elem1 in elem[1:]:
                     symbol = Symbol(elem1)
@@ -146,13 +144,23 @@ class Page:
             for j in range(0,len(self.symbols)):
                 if self.symbols[j].name == value:
                     self.symbolinsts[i].symbol = self.symbols[j]
-                    symbol_loc = self.symbolinsts[i].loc
+                    symbol_loc = (self.symbolinsts[i].loc[0], self.symbolinsts[i].loc[1])
+                    symbol_angle = self.symbolinsts[i].loc[2]
                     self.symbolinsts[i].pin_loc = []
                     for k in range(0,len(self.symbolinsts[i].symbol.pin_loc)):
-                        pin_loc = self.symbolinsts[i].symbol.pin_loc[k]
-                        inst_loc = (round(symbol_loc[0] + pin_loc[0],2),round(symbol_loc[1]+pin_loc[1],2))
+                        pin_loc_unrotated = self.symbolinsts[i].symbol.pin_loc[k]
+                        if symbol_angle == 0:
+                            pin_loc = pin_loc_unrotated
+                        if symbol_angle == 90:
+                            pin_loc = (-pin_loc_unrotated[1],pin_loc_unrotated[0])
+                        if symbol_angle == 180:
+                            pin_loc = (-pin_loc_unrotated[0],-pin_loc_unrotated[1])
+                        if symbol_angle == 270:
+                            pin_loc = (pin_loc_unrotated[1],-pin_loc_unrotated[0])
+                        inst_loc = (round(symbol_loc[0] + pin_loc[0],2),round(symbol_loc[1]-pin_loc[1],2))
                         self.symbolinsts[i].pin_loc.append(inst_loc)
 
+    """
     def DumpNets(self):
         print(self.junction_nets)
         print(self.wire_nets)
@@ -165,7 +173,36 @@ class Page:
             print(symbolinst.name)
             print(symbolinst.pin_nets)
         print()
+
+    def DumpNets2(self):
+        print('Nets')
+        for i in range(1,self.num_nets+1):
+            print(i,self.net_names[i])
+        print('Junctions')
+        print(self.junction_nets)
+        print('Wires')
+        print(self.wire_nets)
+        print('Ports')
+        print(self.port_nets)
+        print(self.port_name)
+        print(self.port_loc)
+        print('Sheets')
+        for sheet in self.sheets:
+            print(sheet.instancename)
+            print(sheet.pin_nets)
+            print(sheet.pin_name)
+            print(sheet.pin_loc)
+        print('Symbols')
+        for symbolinst in self.symbolinsts:
+            print(symbolinst.name)
+            print(symbolinst.pin_nets)
+            print(symbolinst.symbol.pin_num)
+            print(symbolinst.symbol.pin_name)
+            print(symbolinst.pin_loc)
             
+        print()
+    """
+    
     def CreateNets(self):
         # Mark all nets as unknown
         self.junction_nets = [0]*len(self.junctions)
@@ -202,7 +239,7 @@ class Page:
                     renamed = True
             if not renamed:
                 self.net_names[i] = 'net_'+str(i)
-        #self.DumpNets()
+        #self.DumpNets2()
                 
     def PropagateNet(self,net,loc):
         done = False
@@ -261,12 +298,11 @@ class Page:
         for i in range(0,len(self.symbolinsts)):
             name = self.symbolinsts[i].name
             #value = self.symbolinsts[i].symtype
-            baseloc = self.symbolinsts[i].loc
+            #baseloc = self.symbolinsts[i].loc
             symbol = self.symbolinsts[i].symbol
             print(name, symbol.name)
-            for j in range(0,len(symbol.pin_name)):
-                loc = (round(symbol.pin_loc[j][0] + baseloc[0],2), round(symbol.pin_loc[j][1] + baseloc[1],2)) 
-                print(symbol.pin_name[j], symbol.pin_num[j], loc)
+            for j in range(0,len(symbolinsts[i].pin_name)):
+                print(symbol.pin_name[j], symbol.pin_num[j], symbolinsts[i].pin_name[j])
 
         print()
         
@@ -337,7 +373,7 @@ for page in pages:
             for i in range(0,len(s.pin_nets)):
                 if i!=0:
                     f.write(', ');
-                f.write(page.net_names[s.pin_nets[i]])                  
+                f.write('.'+s.pin_name[i]+'('+page.net_names[s.pin_nets[i]]+')')                  
             f.write(');\n')
         f.write('endmodule\n')
 

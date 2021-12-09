@@ -113,7 +113,7 @@
   (symbol (lib_id "VerilogLibrary:NOT") (at 78.74 44.45 0)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 2089dfb8-24a2-4650-a00d-8fcfa11c393e)
-    (property "Reference" "U4" (id 0) (at 78.74 35.56 0))
+    (property "Reference" "U3" (id 0) (at 78.74 35.56 0))
     (property "Value" "NOT" (id 1) (at 78.74 38.1 0))
     (property "Footprint" "" (id 2) (at 78.74 44.45 0)
       (effects (font (size 1.27 1.27)) hide)
