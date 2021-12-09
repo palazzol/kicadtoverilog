@@ -344,7 +344,8 @@ for page in pages:
 # Generate Verilog files
 
 for page in pages:
-    module_name = page.filename.replace('.','_')
+    #module_name = page.filename.replace('.','_')
+    module_name = page.filename.split('.')[0]
     print("Writing file:",module_name+".v")
     with open(VERILOG_PROJECT_DIR+module_name+'.v','w') as f:
         f.write('module '+ module_name + '(\n')
@@ -362,13 +363,17 @@ for page in pages:
             f.write('\n');
         for s in page.symbolinsts:
             f.write('    '+s.symtype+' '+s.name+'(')
+            pin_written = False
             for i in range(0,len(s.pin_nets)):
-                if i!=0:
+                if pin_written:
                     f.write(', ');
-                f.write(page.net_names[s.pin_nets[i]])
+                if s.symbol.pin_type[i] != 'no_connect': 
+                    f.write('.'+s.symbol.pin_name[i]+'('+page.net_names[s.pin_nets[i]]+')')
+                    pin_written = True
             f.write(');\n')
         for s in page.sheets:
-            sheet_name = s.filename.replace('.','_')
+            #sheet_name = s.filename.replace('.','_')
+            sheet_name = s.filename.split('.')[0]
             f.write('    '+sheet_name+' '+s.instancename+'(')
             for i in range(0,len(s.pin_nets)):
                 if i!=0:

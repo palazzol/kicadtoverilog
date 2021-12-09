@@ -333,7 +333,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "test.kicad_pro",
+    "filename": "kicadtoverilog_test.kicad_pro",
     "version": 1
   },
   "net_settings": {
@@ -421,11 +421,11 @@
     ],
     [
       "633f75c5-3e59-4c5c-acaa-7b07045091db",
-      "inv"
+      "inv1"
     ],
     [
       "f15199f8-d839-4b26-a88d-cbb37c25a286",
-      "inv1"
+      "inv2"
     ]
   ],
   "text_variables": {}
