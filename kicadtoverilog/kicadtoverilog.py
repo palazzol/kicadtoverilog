@@ -2,28 +2,29 @@
 """
 Created on Tue Oct 26 09:18:39 2021
 
-@author: frank
+@author: palazzol
 """
 
-import pprint  # for testing
+#import pprint  # for testing
 import sexpr   # for parsing
+import argparse
+import shutil
 
-TEST_SCHEMATIC      = 'kicadtoverilog_test.kicad_sch'
-KICAD_PROJECT_DIR   = '..\\kicadtoverilog_test\\'
-VERILOG_PROJECT_DIR = '..\\verilog\\'
-
+# Convert KiCad name "~{XXX}" to legal Verilog name "not_XXX"
 def ConvertUnderbarName(name):
     return name.replace('~{','not_').replace('}','')
     
 # A Symbol definition, cached in a schematic page
 class Symbol:
     def __init__(self,parsed):
-        self.name = ''
+        self.name = ''      # Symbol Name
+        # for each pin, we have lists of type, location (relative), name, and number
         self.pin_type = []
         self.pin_loc = []
         self.pin_name = []
         self.pin_num = []
         #pprint.pp(parsed)
+        # initialize from the s-expressions
         for elem in parsed[2:]:
             if isinstance(elem, list):
                 if elem[0] == 'property':
@@ -46,9 +47,10 @@ class Symbol:
 # A Symbol Instance on a schematic page
 class SymbolInstance:
     def __init__(self,parsed):
-        self.name = ''
-        self.symtype = ''
-        self.loc = (0,0)
+        self.name = ''      # instance RefDes
+        self.symtype = ''   # instance Value (type name)
+        self.loc = (0,0)    # instance location
+        # initialize from the s-expressions
         for item in parsed:
             if item[0] == 'at':
                 self.loc = (item[1],item[2],item[3])
@@ -64,9 +66,11 @@ class Sheet:
     def __init__(self,parsed):
         self.instancename = ''
         self.filename = ''
+        # for each pin, we have lists of type, location (absolute), name
         self.pin_name = []
         self.pin_type = []
         self.pin_loc = []
+        # initialize from the s-expressions
         for property in parsed:
             if property[0] == 'property':
                 if property[1] == 'Sheet name':
@@ -79,29 +83,33 @@ class Sheet:
                 for n in range(3,len(property)):
                     x = property[n]
                     if x[0] == 'at':
-                        self.addPin(pin_name,pin_type,x[1],x[2])
-                        
-    def addPin(self,name,pintype,x,y):
-        self.pin_name.append(name)
-        self.pin_type.append(pintype)
-        self.pin_loc.append((x,y))
-        #print(self.filename,self.instancename,name,pintype,(x,y))
+                        self.pin_name.append(pin_name)
+                        self.pin_type.append(pin_type)
+                        self.pin_loc.append((x[1],x[2]))
+                        #print(self.filename,self.instancename,pin_name,pin_type,(x[1],x[2]))
         
 # A Schematic Page, created by parsing a *.kicad_sch file
 class Page:
-    def __init__(self, filename, recurse):
+    def __init__(self, path, filename, recurse):
+        self.filename = filename
+        
         self.sheets = []
+        
         self.symbolinsts = []
         self.symbols = []
-        self.filename = filename
+        
         self.port_name = []
         self.port_loc = []
         self.port_type = []
+        
+        # Net stuff
         self.wires = []
         self.junctions = []
         self.wire1 = []
         self.wire2 = []
-        parsed = ParseFile(self.filename)
+        
+        # initialize from the s-expressions
+        parsed = ParseFile(path, self.filename)
         for elem in parsed:
             if elem[0] == 'sheet':
                 sheet = Sheet(elem)
@@ -130,7 +138,8 @@ class Page:
                 junction_loc = (elem[1][1],elem[1][2])
                 self.junctions.append(junction_loc)
                 #print('Junction:',junction_loc)
-        # Create a reference from each symbolinst to it's symbol
+                
+        # Create a reference from each symbolinst to its symbol
         self.CreateSymbolRefs()
                 
     def Sheets(self):
@@ -139,14 +148,20 @@ class Page:
     def CreateSymbolRefs(self):
         # Link Symbols with SymbolRefs
         # Add symbolinst[i].pin_loc
+        # This is O(N*M) in number of symbols and symbolrefs - could be optimized
         for i in range(0,len(self.symbolinsts)):
             value = self.symbolinsts[i].symtype
             for j in range(0,len(self.symbols)):
                 if self.symbols[j].name == value:
+                    # Calculate and save the absolute position of each symbol pin
                     self.symbolinsts[i].symbol = self.symbols[j]
                     symbol_loc = (self.symbolinsts[i].loc[0], self.symbolinsts[i].loc[1])
                     symbol_angle = self.symbolinsts[i].loc[2]
                     self.symbolinsts[i].pin_loc = []
+                    # Note oddity of coordinates in KiCad...
+                    # Symbol y-coordinates increase up
+                    # Global y-coordinates increase down
+                    # This code handles this properly
                     for k in range(0,len(self.symbolinsts[i].symbol.pin_loc)):
                         pin_loc_unrotated = self.symbolinsts[i].symbol.pin_loc[k]
                         if symbol_angle == 0:
@@ -216,11 +231,14 @@ class Page:
         #self.DumpNets()
         
         current_net = 1
+        # Go through each junction with unknown net. 
+        # Try to propagate this net as far as possible
         for i in range(0,len(self.junction_nets)):
             if self.junction_nets[i] == 0:
                 self.junction_nets[i] = current_net
                 self.PropagateNet(current_net, self.junctions[i])
                 current_net += 1
+        # Now go through each wire end and do the same
         for i in range(0,len(self.wire_nets)):
             if self.wire_nets[i] == 0:
                 self.wire_nets[i] = current_net
@@ -228,20 +246,15 @@ class Page:
                 self.PropagateNet(current_net, self.wire2[i])
                 current_net += 1
         
-        # rename nets to eliminate port pins
+        # Use the net number as the name
         self.num_nets = current_net-1
         self.net_names = ['wire_NC']*(self.num_nets+1)
         for i in range(1, self.num_nets+1):
-            renamed = False
-            for j in range(0,len(self.port_nets)):
-                if self.port_nets[j] == i:
-                    self.net_names[i] = self.port_name[j]
-                    renamed = True
-            if not renamed:
-                self.net_names[i] = 'net_'+str(i)
+            self.net_names[i] = 'net_'+str(i)
         #self.DumpNets2()
                 
     def PropagateNet(self,net,loc):
+        # Propagate the current net as far as you can
         done = False
         while not done:
             done = True
@@ -306,15 +319,15 @@ class Page:
 
         print()
         
-def ParseFile(fname):
-    print('Reading file:',fname);
-    with open(KICAD_PROJECT_DIR+fname,'r') as f:
+def ParseFile(path, fname):
+    LogMessage('I','Reading '+fname+'...');
+    with open(path+fname,'r') as f:
         sexp = f.read()
         return sexpr.parse_sexp(sexp)
     
 # Parse schematic files recursively
-def PageCreateRecursive(pageNames, pages, filename):
-    page = Page(filename, False)
+def PageCreateRecursive(pageNames, pages, path, filename):
+    page = Page(path, filename, False)
     pages.append(page)
     pageNames.append(page.filename)
 
@@ -322,66 +335,128 @@ def PageCreateRecursive(pageNames, pages, filename):
         if sheet.filename in pageNames:
             pass
         else:
-            PageCreateRecursive(pageNames, pages, sheet.filename)
+            PageCreateRecursive(pageNames, pages, path, sheet.filename)
             
 # Parse Schematic Files starting with the top one in the heirarchy
-def ParseFiles(pages, topfilename):
+def ParseFiles(pages, path, topfilename):
     pageNames = []
-    PageCreateRecursive(pageNames, pages, topfilename)
+    PageCreateRecursive(pageNames, pages, path, topfilename)
     
+def LogMessage(typecode, message):
+    if typecode == 'E':
+        print('Error:   '+message)
+    elif typecode == 'W':
+        print('Warning: '+message)
+    else:
+        print('Info:    '+message)
+            
 ######################################################
 
-pages = []
-
-# Parse all the pages
-ParseFiles(pages, TEST_SCHEMATIC)
-
-# Create netlists for each page
-print("Creating netlists...")
-for page in pages:
-    page.CreateNets()
+def KicadToVerilog():
+    # Parsing the arguments
+    parser = argparse.ArgumentParser(description = 'KiCad to Verilog')
+    parser.add_argument('-i','--input',help='Input Schematic File',required=True)
+    parser.add_argument('-o','--output',help='Output Directory',required=True)
+    #parser.add_argument('-v','--verbose',default=False,help='Verbose Mode',required=False,action="store_true")
+    global_args = parser.parse_args()
     
-# Generate Verilog files
-
-for page in pages:
-    #module_name = page.filename.replace('.','_')
-    module_name = page.filename.split('.')[0]
-    print("Writing file:",module_name+".v")
-    with open(VERILOG_PROJECT_DIR+module_name+'.v','w') as f:
-        f.write('module '+ module_name + '(\n')
-        for i in range(0,len(page.port_name)):
-            if i != 0:
-                f.write(',\n')
-            f.write('    '+page.port_type[i]+' '+page.port_name[i])
-        f.write(');\n\n')
-        wires_written = False
-        for i in range(1,page.num_nets+1):
-            if page.net_names[i][0:4] == 'net_':
-                f.write('    wire '+page.net_names[i]+';\n')
-                wires_written = True
-        if wires_written:
-            f.write('\n');
-        for s in page.symbolinsts:
-            f.write('    '+s.symtype+' '+s.name+'(')
-            pin_written = False
-            for i in range(0,len(s.pin_nets)):
-                if pin_written:
-                    f.write(', ');
-                if s.symbol.pin_type[i] != 'no_connect': 
-                    f.write('.'+s.symbol.pin_name[i]+'('+page.net_names[s.pin_nets[i]]+')')
-                    pin_written = True
-            f.write(');\n')
-        for s in page.sheets:
-            #sheet_name = s.filename.replace('.','_')
-            sheet_name = s.filename.split('.')[0]
-            f.write('    '+sheet_name+' '+s.instancename+'(')
-            for i in range(0,len(s.pin_nets)):
-                if i!=0:
-                    f.write(', ');
-                f.write('.'+s.pin_name[i]+'('+page.net_names[s.pin_nets[i]]+')')                  
-            f.write(');\n')
-        f.write('endmodule\n')
-
+    pages = []
     
+    # Parse all the pages
+    filename = global_args.input.split('\\')[-1]
+    pathparts = global_args.input.split('\\')[0:-1]
+    kicadpath = '\\'.join(pathparts)+'\\'
+    verilogpath = global_args.output+'\\'
+    ParseFiles(pages, kicadpath, filename)
+    
+    # Create netlists for each page
+    LogMessage('I', "Creating netlists...")
+    for page in pages:
+        page.CreateNets()
+        
+    # Generate Verilog files
+    
+    for page in pages:
+        #module_name = page.filename.replace('.','_')
+        module_name = page.filename.split('.')[0]
+        LogMessage('I', 'Writing '+module_name+'.v...')
+        with open(verilogpath+module_name+'.v','w') as f:
+            f.write('// Generated by kicadtoverilog.py\n\n')
+            f.write('module '+ module_name + '(\n')
+            for i in range(0,len(page.port_name)):
+                if i != 0:
+                    f.write(',\n')
+                f.write('    '+page.port_type[i]+' '+page.port_name[i])
+            f.write(');\n\n')
+            
+            f.write('    // Net definitions\n')
+            wires_written = False
+            for i in range(1,page.num_nets+1):
+                if page.net_names[i][0:4] == 'net_':
+                    f.write('    wire '+page.net_names[i]+';\n')
+                    wires_written = True
+            if wires_written:
+                f.write('\n');
+                
+            # assign input ports to nets
+            f.write('    // Input pins\n')
+            ports_written = False
+            for i in range(0,len(page.port_name)):
+                if page.port_type[i] == 'input':
+                    f.write('    assign ' + page.net_names[page.port_nets[i]] + ' = ' + page.port_name[i] + ';\n')
+                    ports_written = True
+            if ports_written:
+                f.write('\n')
+                
+            f.write('    // Internal blocks\n')
+            symbol_pins = False;
+            for s in page.symbolinsts:
+                f.write('    '+s.symtype+' '+s.name+'(')
+                pin_written = False
+                for i in range(0,len(s.pin_nets)):
+                    if pin_written:
+                        f.write(', ');
+                    if s.symbol.pin_type[i] != 'no_connect': 
+                        f.write('.'+s.symbol.pin_name[i]+'('+page.net_names[s.pin_nets[i]]+')')
+                        pin_written = True
+                        symbol_pins = True;
+                f.write(');\n')
+    
+            page_pins = False
+            for s in page.sheets:
+                #sheet_name = s.filename.replace('.','_')
+                sheet_name = s.filename.split('.')[0]
+                f.write('    '+sheet_name+' '+s.instancename+'(')
+                for i in range(0,len(s.pin_nets)):
+                    if i!=0:
+                        f.write(', ');
+                    f.write('.'+s.pin_name[i]+'('+page.net_names[s.pin_nets[i]]+')')      
+                    page_pins = True
+                f.write(');\n')
+                
+            if symbol_pins or page_pins:
+                f.write('\n')
+                
+            # assign nets to output ports
+            f.write('    // Output pins\n')
+            ports_written = False
+            for i in range(0,len(page.port_name)):
+                if page.port_type[i] == 'output':
+                    f.write('    assign ' + page.port_name[i] + ' = ' + page.net_names[page.port_nets[i]] + ';\n')
+                    ports_written = True
+            #if ports_written:
+            #    f.write('\n')
+                
+            f.write('endmodule\n')
+            
+    # Copy over synthesis file
+    LogMessage('I', "Copying synthesis_defs.v...")
+    shutil.copy('synthesis_defs.v',verilogpath+'synthesis_defs.v')
+        
+    LogMessage('I', "Done!")
+        
+if __name__ == "__main__":
+    KicadToVerilog()
+
     
     

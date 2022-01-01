@@ -2,7 +2,7 @@
 
   (uuid 60d5e896-17bf-4028-a71b-95ca8bd7022c)
 
-  (paper "A4")
+  (paper "USLetter")
 
   (lib_symbols
     (symbol "NOR2_1" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)

@@ -2,7 +2,7 @@
 
   (uuid 9538e4ed-27e6-4c37-b989-9859dc0d49e8)
 
-  (paper "A4")
+  (paper "USLetter")
 
   (lib_symbols
     (symbol "Device:LED" (pin_numbers hide) (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes)
@@ -397,6 +397,26 @@
     (pin "2" (uuid a1d3b0bb-6c5a-48a2-8238-7e5d9e718e2b))
   )
 
+  (sheet (at 96.52 106.68) (size 41.91 33.02) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid) (color 0 0 0 0))
+    (fill (color 0 0 0 0.0000))
+    (uuid 1ee9928d-39f3-49de-bfea-81da4b94202b)
+    (property "Sheet name" "divby3test" (id 0) (at 96.52 105.9684 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheet file" "divby3test.kicad_sch" (id 1) (at 96.52 140.2846 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (pin "CLK6502" output (at 138.43 121.92 0)
+      (effects (font (size 1.27 1.27)) (justify right))
+      (uuid 59f470fe-b807-4e3b-92bd-122c218a76bc)
+    )
+    (pin "OSCINPUT" input (at 96.52 121.92 180)
+      (effects (font (size 1.27 1.27)) (justify left))
+      (uuid c9b5b286-60c6-4c12-9646-23961d2644ad)
+    )
+  )
+
   (sheet (at 67.31 49.53) (size 25.4 27.94) (fields_autoplaced)
     (stroke (width 0.1524) (type solid) (color 0 0 0 0))
     (fill (color 0 0 0 0.0000))
@@ -426,6 +446,7 @@
     (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62" (page "2"))
     (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/633f75c5-3e59-4c5c-acaa-7b07045091db" (page "3"))
     (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/f15199f8-d839-4b26-a88d-cbb37c25a286" (page "4"))
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b" (page "5"))
   )
 
   (symbol_instances
@@ -458,6 +479,63 @@
     )
     (path "/4f2d6a8d-0e80-4d54-bbae-408c1fcd4a62/f15199f8-d839-4b26-a88d-cbb37c25a286/2089dfb8-24a2-4650-a00d-8fcfa11c393e"
       (reference "U4") (unit 1) (value "NOT") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/de77cc3b-6461-4584-bece-1b82a64083cf"
+      (reference "U5") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/7a863598-1fe4-4965-ab0e-1f5f7c693cce"
+      (reference "U6") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/aa8b3dd5-a5db-4d28-9f06-c334420f0ab0"
+      (reference "U7") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/067be3a4-5e77-4472-9815-f50aab9fa6e2"
+      (reference "U8") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/2800f70a-c288-469b-9829-771526ce2d9e"
+      (reference "U9") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/cd372e86-2860-41ec-9d38-36aaf34b5770"
+      (reference "U10") (unit 1) (value "AND2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/b0d9aeee-3dba-4aa3-a75e-a4ba0c4a286b"
+      (reference "U11") (unit 1) (value "AND2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/887bada7-fc95-4e33-a94c-ef38c1958dfe"
+      (reference "U12") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/856303fa-24c8-41cb-88b2-1f106ae8656c"
+      (reference "U13") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/20582dd1-49d6-455e-9246-f48e6caa6db7"
+      (reference "U14") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/b4166ee3-09bf-48a7-8d74-8969bd6d2dd3"
+      (reference "U15") (unit 1) (value "NOT") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/6c620b1f-3b68-45a2-afba-bbd859b22d82"
+      (reference "U16") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/d6840884-81c4-4835-9a07-0471b17aca9d"
+      (reference "U17") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/02ecf064-5973-4753-9e25-8af2823609b1"
+      (reference "U18") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/3af2825f-8ffc-4a6a-be03-a0adf47385f2"
+      (reference "U19") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/5f9c655e-4dae-40a5-ae38-5294b8242232"
+      (reference "U20") (unit 1) (value "AND2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/9912dfed-5efa-49d5-99d4-7fa8c479d8d9"
+      (reference "U21") (unit 1) (value "AND2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/fee1bc3c-60fe-45a5-8fef-c8b543d31634"
+      (reference "U22") (unit 1) (value "NOR2") (footprint "")
+    )
+    (path "/1ee9928d-39f3-49de-bfea-81da4b94202b/8afc546e-224a-45b0-a565-0c848fec0069"
+      (reference "U23") (unit 1) (value "NOR2") (footprint "")
     )
     (path "/844f01a0-ac23-4a99-910e-4e91c579bb2b"
       (reference "X1") (unit 1) (value "DGOF5S3") (footprint "Oscillator:Oscillator_DIP-14")
